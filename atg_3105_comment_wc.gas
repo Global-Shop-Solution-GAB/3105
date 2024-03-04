@@ -1,0 +1,155 @@
+Program.Sub.ScreenSU.Start
+gui.Exclude..create
+gui.Exclude..caption("WC's Req. for Comment")
+gui.Exclude..size(3705,1845)
+gui.Exclude..position(0,0)
+gui.Exclude..event(unload,exclude_unload)
+gui.Exclude..alwaysontop(False)
+gui.Exclude..fontname("Arial")
+gui.Exclude..fontsize(8)
+gui.Exclude..forecolor(0)
+gui.Exclude..fontstyle(,,,,)
+gui.Exclude..BackColor(-2147483633)
+gui.Exclude..controlbox(True)
+gui.Exclude..maxbutton(False)
+gui.Exclude..minbutton(True)
+gui.Exclude..mousepointer(0)
+gui.Exclude..moveable(True)
+gui.Exclude..sizeable(False)
+gui.Exclude..ShowInTaskBar(True)
+gui.Exclude..titlebar(True)
+gui.Exclude.frame1.create(frame)
+gui.Exclude.frame1.caption("")
+gui.Exclude.frame1.size(3420,795)
+gui.Exclude.frame1.position(65,5)
+gui.Exclude.frame1.visible(True)
+gui.Exclude.frame1.fontname("Arial")
+gui.Exclude.frame1.fontsize(8)
+gui.Exclude.ddlist.create(dropdownlist)
+gui.Exclude.ddlist.visible(True)
+gui.Exclude.ddlist.size(2520,330)
+gui.Exclude.ddlist.zorder(0)
+gui.Exclude.ddlist.position(200,260)
+gui.Exclude.ddlist.enabled(True)
+gui.Exclude.ddlist.parent("frame1")
+gui.Exclude.ddlist.fontname("Arial")
+gui.Exclude.ddlist.fontsize(8)
+gui.Exclude.cmdexclude.create(button)
+gui.Exclude.cmdexclude.caption("^")
+gui.Exclude.cmdexclude.visible(True)
+gui.Exclude.cmdexclude.size(270,270)
+gui.Exclude.cmdexclude.zorder(0)
+gui.Exclude.cmdexclude.position(2885,290)
+gui.Exclude.cmdexclude.enabled(True)
+gui.Exclude.cmdexclude.parent("frame1")
+gui.Exclude.cmdexclude.fontname("Arial")
+gui.Exclude.cmdexclude.fontsize(8)
+gui.Exclude.cmdexclude.event(click,cmdexclude_click)
+gui.Exclude.cmdDel.create(button)
+gui.Exclude.cmdDel.caption("Remove")
+gui.Exclude.cmdDel.visible(True)
+gui.Exclude.cmdDel.size(855,375)
+gui.Exclude.cmdDel.zorder(0)
+gui.Exclude.cmdDel.position(155,845)
+gui.Exclude.cmdDel.enabled(True)
+gui.Exclude.cmdDel.fontname("Arial")
+gui.Exclude.cmdDel.fontsize(8)
+gui.Exclude.cmdDel.event(click,cmddel_click)
+
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+
+Program.Sub.Main.Start
+'DUMUR REQUIRE COMMENTS FOR WC PROGRAM
+'Program Runs off custom hook
+
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+Gui.Exclude..Show
+
+F.Intrinsic.Control.CallSub(Ddlist)
+
+Program.Sub.Main.End
+
+
+program.sub.cmdexclude_click.start
+V.Local.sCol.Declare(String)
+V.Local.sWidth.Declare(String)
+V.Local.part.Declare(String)
+V.Local.sret.Declare(String)
+V.Local.squery.Declare(String)
+V.Local.temp.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sFormat.Declare(String)
+
+F.Intrinsic.String.Split("WORKCETER*!*DESCRIPTION","*!*",V.Local.sCol)
+F.Intrinsic.String.Split("2000*!*4000","*!*",V.Local.swidth)
+'F.Intrinsic.String.Split("*!*00.0000","*!*",V.Local.sFormat)
+V.Local.squery.Set("SELECT MACHINE, WC_NAME FROM V_WORKCENTERS ORDER BY MACHINE")
+F.Intrinsic.UI.Browser("Select Workcenter","conx",V.Local.squery,V.Local.sCol,V.Local.sWidth,400,400,V.Local.sRet)
+
+F.Intrinsic.Control.If(V.Local.sret,<>,"***CANCEL***")
+	F.Intrinsic.string.Split(V.Local.sret,"*!*",V.Local.sret)
+
+	Gui.Exclude.ddlist.AddItem(V.Local.sret(0))
+	F.ODBC.Connection!conx.OpenRecordsetRW("rstPL","Select * from ATG_95_COMMENT_WC")
+	F.ODBC.conx!rstPL.AddNew
+	F.ODBC.conx!rstPL.Set!WORKCENTER(V.Local.sret(0))
+	F.ODBC.conx!rstPL.Update
+	F.ODBC.conx!rstPL.Close
+	F.Intrinsic.String.Concat("WC '",V.Local.sret(0),"' added to WC Comment List.",V.Local.temp)
+	F.Intrinsic.UI.Msgbox(V.Local.temp,"Added.")
+
+F.Intrinsic.Control.EndIf
+
+program.sub.cmdexclude_click.end
+
+
+program.sub.exclude_unload.start
+F.Intrinsic.Control.End
+
+program.sub.exclude_unload.end
+
+
+Program.Sub.ddlist.Start
+
+V.Local.sSQL.Declare(String)
+
+Gui.Exclude.ddlist.ClearItems
+
+
+
+	F.ODBC.Connection!conx.OpenRecordsetRO("rstpl","Select * from ATG_95_COMMENT_WC ORDER BY WORKCENTER")
+	F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstpl.EOF,=,True)
+		Gui.Exclude.ddlist.AddItem(V.ODBC.conx!rstpl.FieldValTrim!WORKCENTER)
+		F.ODBC.conx!rstpl.MoveNext
+		Gui.Exclude.ddlist.ListIndex(0)
+	F.Intrinsic.Control.Loop
+	F.ODBC.conx!rstpl.Close
+
+
+Program.Sub.ddlist.End
+
+
+program.sub.cmddel_click.start
+V.Local.ssql.Declare(String)
+
+
+
+F.Intrinsic.String.Concat("delete from ATG_95_COMMENT_WC where workcenter='",V.Screen.Exclude!ddlist.Text,"'",V.Local.ssql)
+
+F.ODBC.Connection!conx.Execute(V.Local.ssql)
+
+F.Intrinsic.Control.CallSub(Ddlist)
+
+program.sub.cmddel_click.end
+
+
+
